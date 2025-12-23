@@ -13,7 +13,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (accuracy_score, confusion_matrix, roc_auc_score, 
                              roc_curve, f1_score, precision_score, recall_score)
 
-mlflow.set_experiment("CI Training Otomatis")
 # Folder output sementara
 os.makedirs('assets', exist_ok=True)
 
@@ -36,8 +35,9 @@ def run_experiment():
         df = df.drop(columns=['Email No.'])
     
     # Pisahkan Fitur (X) dan Target (y)
-    X = df.drop(columns=['Prediction'])
     y = df['Prediction']
+    X = df.drop(columns=['Prediction'])
+  
 
     print(f"✅ Data Siap. Ukuran: {X.shape}")
 
@@ -60,7 +60,7 @@ def run_experiment():
     }
 
     # 4. Eksekusi Tuning dengan MLflow Tracking
-    with mlflow.start_run(run_name="Tuning_RandomForest_Fix"):
+    with mlflow.start_run():
         print("⚙️ Sedang melakukan GridSearch (Tuning)...")
         
         # Grid Search
