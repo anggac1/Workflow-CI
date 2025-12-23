@@ -1,0 +1,66 @@
+name: CI Training & Docker Build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  # Konfigurasi Koneksi DagsHub (Diambil dari Secrets GitHub)
+  MLFLOW_TRACKING_URI: https://dagshub.com/${{ secrets.DAGSHUB_REPO_OWNER }}/${{ secrets.DAGSHUB_REPO_NAME }}.mlflow
+  MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_REPO_OWNER }}
+  MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Ambil Source Code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # 2. Siapkan Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      # 3. Install Library Pendukung
+      - name: Install Dependencies
+        run: |
+          pip install mlflow==2.19.0 dagshub pandas numpy scikit-learn virtualenv
+
+      # 4. Jalankan Training (File MLProject)
+      - name: Run Training (MLflow)
+        # Perintah ini akan menjalankan file MLProject/modelling.py
+        run: |
+          mlflow run MLProject --no-conda --env-manager=local
+
+      # 5. Login ke Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 6. Build & Push Docker Image (Syarat Advance)
+      - name: Build & Push Docker Image
+        run: |
+          # A. Ambil Run ID dari eksperimen yang BARU SAJA berjalan
+          # Pastikan nama eksperimen di sini ('Automated_CI_Training') SAMA dengan di modelling.py
+          LAST_RUN_ID=$(python -c "import mlflow; mlflow.set_tracking_uri('${{ env.MLFLOW_TRACKING_URI }}'); runs = mlflow.search_runs(experiment_names=['Automated_CI_Training']); print(runs.iloc[0].run_id)")
+          
+          echo "Building Docker for Run ID: $LAST_RUN_ID"
+          
+          # B. Build Docker Image
+          # -m: Lokasi model di dalam MLflow (nama folder 'model_rf_final' harus sama dengan di modelling.py)
+          # -n: Nama Image di Docker Hub (Format: username/nama-repo:tag)
+          
+          mlflow models build-docker \
+            -m "runs:/$LAST_RUN_ID/model_rf_final" \
+            -n "${{ secrets.DOCKER_USERNAME }}/email-spam-project:latest" \
+            --enable-mlserver
+
+          # C. Push ke Docker Hub
+          docker push ${{ secrets.DOCKER_USERNAME }}/email-spam-project:latest

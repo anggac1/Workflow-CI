@@ -1,0 +1,16 @@
+name: email_spam_env
+channels:
+  - defaults
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+    - mlflow==2.19.0
+    - dagshub
+    - pandas
+    - numpy
+    - scikit-learn
+    - matplotlib
+    - seaborn
+    - joblib
+    - virtualenv
