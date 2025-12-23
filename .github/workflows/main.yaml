@@ -15,37 +15,66 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Run actions/checkout@v3
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Set up Python 3.12.7
         uses: actions/setup-python@v4
         with:
           python-version: '3.12.7'
 
-      - name: Install Dependencies
+      - name: Check Env
+        run: |
+          python --version
+          pip --version
+          echo "Environment Checked OK"
+
+      - name: Install dependencies
         run: |
           pip install mlflow==2.19.0 dagshub pandas numpy scikit-learn matplotlib seaborn virtualenv
-      - name: Run Training (MLflow)
 
+      - name: Run mlflow project
         run: |
           mlflow run MLProject --env-manager=local --experiment-name Automated_CI_Training
 
-      - name: Login to Docker Hub
+      - name: Get latest MLflow run_id
+        id: get_run_id
+        run: |
+          LAST_RUN_ID=$(python -c "import mlflow; mlflow.set_tracking_uri('${{ env.MLFLOW_TRACKING_URI }}'); runs = mlflow.search_runs(experiment_names=['Automated_CI_Training']); print(runs.iloc[0].run_id)")
+          echo "Found Run ID: $LAST_RUN_ID"
+          echo "LAST_RUN_ID=$LAST_RUN_ID" >> $GITHUB_ENV
+
+      - name: Install Python dependencies
+        run: |
+          echo "Verifying installed packages..."
+          pip freeze
+          echo "All dependencies are ready."
+          
+      - name: Upload to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlruns-backup
+          path: mlruns/
+
+      - name: Build Docker Model
+        run: |
+          echo "Building Docker for Run ID: ${{ env.LAST_RUN_ID }}"
+          mlflow models build-docker \
+            -m "runs:/${{ env.LAST_RUN_ID }}/model_rf_final" \
+            -n "${{ secrets.DOCKER_USERNAME }}/email-spam-project:latest" \
+            --enable-mlserver
+
+      - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build & Push Docker Image
+      - name: Tag Docker Image
         run: |
-          LAST_RUN_ID=$(python -c "import mlflow; mlflow.set_tracking_uri('${{ env.MLFLOW_TRACKING_URI }}'); runs = mlflow.search_runs(experiment_names=['Automated_CI_Training']); print(runs.iloc[0].run_id)")
-          
-          echo "Building Docker for Run ID: $LAST_RUN_ID"
-          
-          mlflow models build-docker \
-            -m "runs:/$LAST_RUN_ID/model_rf_final" \
-            -n "${{ secrets.DOCKER_USERNAME }}/email-spam-project:latest" \
-            --enable-mlserver
+          docker tag ${{ secrets.DOCKER_USERNAME }}/email-spam-project:latest ${{ secrets.DOCKER_USERNAME }}/email-spam-project:v1
 
+      - name: Push Docker Image
+        run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/email-spam-project:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/email-spam-project:v1
