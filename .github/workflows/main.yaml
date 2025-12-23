@@ -40,7 +40,6 @@ jobs:
 
       - name: Build & Push Docker Image
         run: |
-          # --- PERBAIKAN DI SINI (Tambahkan --env-manager=local agar script python jalan) ---
           LAST_RUN_ID=$(python -c "import mlflow; mlflow.set_tracking_uri('${{ env.MLFLOW_TRACKING_URI }}'); runs = mlflow.search_runs(experiment_names=['Automated_CI_Training']); print(runs.iloc[0].run_id)")
           
           echo "Building Docker for Run ID: $LAST_RUN_ID"
