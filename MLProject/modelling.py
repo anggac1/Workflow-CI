@@ -98,7 +98,8 @@ def run_experiment():
         mlflow.log_metrics(metrics)
 
         # Log Model
-        mlflow.sklearn.log_model(best_model, "model_rf_final")
+        # Ubah nama artifact_path menjadi "model" agar dikenali Docker secara otomatis
+        mlflow.sklearn.log_model(best_model, artifact_path="model")
 
         # 1. Confusion Matrix
         cm = confusion_matrix(y_test, y_pred)
