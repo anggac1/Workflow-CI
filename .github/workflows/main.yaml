@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Run actions/checkout@v3
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Set up Python 3.12.7
@@ -23,25 +23,18 @@ jobs:
         with:
           python-version: '3.12.7'
 
-      - name: Check Env
-        run: |
-          python --version
-          pip --version
-          echo "Environment Checked OK"
-
       - name: Install dependencies
         run: |
-          pip install mlflow==2.19.0 dagshub pandas numpy scikit-learn matplotlib seaborn virtualenv
+          pip install mlflow==2.19.0 dagshub pandas numpy scikit-learn matplotlib seaborn joblib
 
-      - name: Run mlflow project
-        run: |
-          mlflow run MLProject --env-manager=local --experiment-name Automated_CI_Training
+      - name: Run MLflow Training
+        run: mlflow run MLProject --env-manager=local --experiment-name "CI Training Otomatis"
 
       - name: Get latest MLflow run_id
         id: get_run_id
         run: |
-          LAST_RUN_ID=$(python -c "import mlflow; mlflow.set_tracking_uri('${{ env.MLFLOW_TRACKING_URI }}'); runs = mlflow.search_runs(experiment_names=['Automated_CI_Training']); print(runs.iloc[0].run_id)")
-          echo "Found Run ID: $LAST_RUN_ID"
+          # Gunakan nama eksperimen yang konsisten: "CI Training Otomatis"
+          LAST_RUN_ID=$(python -c "import mlflow; mlflow.set_tracking_uri('${{ env.MLFLOW_TRACKING_URI }}'); runs = mlflow.search_runs(experiment_names=['CI Training Otomatis']); print(runs.iloc[0].run_id)")
           echo "LAST_RUN_ID=$LAST_RUN_ID" >> $GITHUB_ENV
 
       - name: Install Python dependencies
