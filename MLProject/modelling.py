@@ -13,6 +13,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (accuracy_score, confusion_matrix, roc_auc_score, 
                              roc_curve, f1_score, precision_score, recall_score)
 
+mlflow.set_experiment("CI Training Otomatis")
 # Folder output sementara
 os.makedirs('assets', exist_ok=True)
 
@@ -35,9 +36,8 @@ def run_experiment():
         df = df.drop(columns=['Email No.'])
     
     # Pisahkan Fitur (X) dan Target (y)
-    y = df['Prediction']
     X = df.drop(columns=['Prediction'])
-  
+    y = df['Prediction']
 
     print(f"✅ Data Siap. Ukuran: {X.shape}")
 
@@ -60,7 +60,7 @@ def run_experiment():
     }
 
     # 4. Eksekusi Tuning dengan MLflow Tracking
-    with mlflow.start_run():
+    with mlflow.start_run(run_name="Tuning_RandomForest_Fix"):
         print("⚙️ Sedang melakukan GridSearch (Tuning)...")
         
         # Grid Search
@@ -98,8 +98,9 @@ def run_experiment():
         mlflow.log_metrics(metrics)
 
         # Log Model
-        # Ubah nama artifact_path menjadi "model" agar dikenali Docker secara otomatis
-        mlflow.sklearn.log_model(best_model, artifact_path="model")
+        mlflow.sklearn.log_model(best_model, "model_rf_final")
+        import joblib
+        joblib.dump(best_model, "model.pkl")
 
         # 1. Confusion Matrix
         cm = confusion_matrix(y_test, y_pred)
