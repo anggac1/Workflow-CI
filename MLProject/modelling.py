@@ -59,8 +59,11 @@ def run_experiment():
         'clf__min_samples_leaf': [1, 2, 4]    # Regularisasi
     }
 
-    # 4. Eksekusi Tuning dengan MLflow Tracking
-    with mlflow.start_run(run_name="Tuning_RandomForest_Fix"):
+    mlflow.set_experiment("CI Training Otomatis")
+    active_run = mlflow.active_run()
+    
+    # 3. Gunakan nested=True jika sudah ada run aktif
+    with mlflow.start_run(run_name="Tuning_RandomForest_Fix", nested=(active_run is not None)):
         print("⚙️ Sedang melakukan GridSearch (Tuning)...")
         
         # Grid Search
